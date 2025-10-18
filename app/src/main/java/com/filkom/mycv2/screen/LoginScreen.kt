@@ -1,5 +1,6 @@
 package com.filkom.mycv2.screen
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -8,25 +9,58 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.filkom.mycv2.viewmodel.AuthViewModel
+import com.filkom.mycv2.viewmodel.LoginStatus
 
 @Composable
-fun LoginScreen(onLogin: () -> Unit, onDaftar: () -> Unit) {
-    // State untuk menyimpan input
+fun LoginScreen(
+    viewModel: AuthViewModel = viewModel(),
+    onLoginSuccess: () -> Unit,
+    onNavigateToDaftar: () -> Unit
+) {
+    val context = LocalContext.current
+    val loginStatus by viewModel.loginStatus.collectAsState()
+
+    // State untuk input form
     var nim by remember { mutableStateOf("") }
     var nama by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
+    // Handle login status
+    LaunchedEffect(loginStatus) {
+        when (loginStatus) {
+            is LoginStatus.Success -> {
+                Toast.makeText(context, "Login berhasil!", Toast.LENGTH_SHORT).show()
+                viewModel.resetLoginStatus()
+                onLoginSuccess()
+            }
+            is LoginStatus.Error -> {
+                Toast.makeText(
+                    context,
+                    (loginStatus as LoginStatus.Error).message,
+                    Toast.LENGTH_SHORT
+                ).show()
+                viewModel.resetLoginStatus()
+            }
+            else -> {}
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -87,7 +121,9 @@ fun LoginScreen(onLogin: () -> Unit, onDaftar: () -> Unit) {
                 .align(Alignment.CenterHorizontally)
                 .padding(vertical = 10.dp)
                 .fillMaxWidth(),
-            onClick = onLogin
+            onClick = {
+                viewModel.login(nim, nama, email, password)
+            }
         ) {
             Text("LOGIN")
         }
@@ -97,7 +133,7 @@ fun LoginScreen(onLogin: () -> Unit, onDaftar: () -> Unit) {
             modifier = Modifier
                 .align(Alignment.CenterHorizontally)
                 .fillMaxWidth(),
-            onClick = onDaftar
+            onClick = onNavigateToDaftar
         ) {
             Text("DAFTAR")
         }
@@ -107,5 +143,8 @@ fun LoginScreen(onLogin: () -> Unit, onDaftar: () -> Unit) {
 @Preview(showBackground = true)
 @Composable
 fun LoginScreenPreview() {
-    LoginScreen({}, {})
+    LoginScreen(
+        onLoginSuccess = {},
+        onNavigateToDaftar = {}
+    )
 }

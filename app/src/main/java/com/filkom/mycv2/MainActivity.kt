@@ -8,16 +8,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavType
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import com.filkom.mycv2.screen.DaftarScreen
 import com.filkom.mycv2.screen.DetailScreen
 import com.filkom.mycv2.screen.LoginScreen
 import com.filkom.mycv2.ui.theme.MyCV2Theme
+import com.filkom.mycv2.viewmodel.AuthViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -36,6 +38,10 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppNavigation(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
+    val viewModel: AuthViewModel = viewModel()
+
+    // Observe current user
+    val currentUser by viewModel.currentUser.collectAsState()
 
     NavHost(
         navController = navController,
@@ -45,10 +51,13 @@ fun AppNavigation(modifier: Modifier = Modifier) {
         // Route Login
         composable("login") {
             LoginScreen(
-                onLogin = {
-                    navController.navigate("detail/default/default/default/default")
+                viewModel = viewModel,
+                onLoginSuccess = {
+                    navController.navigate("detail") {
+                        popUpTo("login") { inclusive = true }
+                    }
                 },
-                onDaftar = {
+                onNavigateToDaftar = {
                     navController.navigate("daftar")
                 }
             )
@@ -57,34 +66,27 @@ fun AppNavigation(modifier: Modifier = Modifier) {
         // Route Daftar
         composable("daftar") {
             DaftarScreen(
-                onSimpan = { nim, nama, email, alamat ->
-                    navController.navigate("detail/$nim/$nama/$email/$alamat")
+                viewModel = viewModel,
+                onRegisterSuccess = {
+                    navController.navigate("detail") {
+                        popUpTo("daftar") { inclusive = true }
+                    }
                 }
             )
         }
 
-        // Route Detail dengan parameter
-        composable(
-            route = "detail/{nim}/{nama}/{email}/{alamat}",
-            arguments = listOf(
-                navArgument("nim") { type = NavType.StringType },
-                navArgument("nama") { type = NavType.StringType },
-                navArgument("email") { type = NavType.StringType },
-                navArgument("alamat") { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            val nim = backStackEntry.arguments?.getString("nim") ?: ""
-            val nama = backStackEntry.arguments?.getString("nama") ?: ""
-            val email = backStackEntry.arguments?.getString("email") ?: ""
-            val alamat = backStackEntry.arguments?.getString("alamat") ?: ""
-
+        // Route Detail
+        composable("detail") {
             DetailScreen(
-                nim = nim,
-                nama = nama,
-                email = email,
-                alamat = alamat,
-                onDaftar = {
+                user = currentUser,
+                onNavigateToDaftar = {
                     navController.navigate("daftar")
+                },
+                onLogout = {
+                    viewModel.logout()
+                    navController.navigate("login") {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
             )
         }
